@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Optional
 
 
 @dataclass
@@ -14,6 +14,7 @@ class ScrapeResult:
     status: int
     scraper_type: str  # "html" | "js"
     response_time: float
+    timestamp: float  # Unix timestamp of when the scrape finished
 
 
 class BaseScraper(ABC):

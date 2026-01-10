@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from src.scraper.base import BaseScraper, ScrapeResult
 from src.stealth.network.tls_client import get_ja4_client
@@ -16,7 +16,7 @@ class HTMLScraper(BaseScraper):
 
     def fetch(self, url: str, **kwargs) -> ScrapeResult:
         """
-        Fetch URL using JA4Client.
+        Fetch URL using JA4Client to mimic a real browser's TLS fingerprint.
 
         Args:
             url: Target URL
@@ -40,6 +40,7 @@ class HTMLScraper(BaseScraper):
 
             # Calculate duration
             duration = time.time() - start_time
+            timestamp = time.time()
 
             # Note: We rely on the caller/Router to decide if a 403/404 is a 'failure'
             # to be retried with JS, but generally we return what we got.
@@ -51,6 +52,7 @@ class HTMLScraper(BaseScraper):
                 status=response.status_code,
                 scraper_type="html",
                 response_time=duration,
+                timestamp=timestamp,
             )
 
         except Exception as e:

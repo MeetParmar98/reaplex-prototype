@@ -1,6 +1,4 @@
 import logging
-from typing import Dict, Any
-
 from src.scraper.base import ScrapeResult
 from src.scraper.html_scraper import HTMLScraper
 from src.scraper.js_scraper import JSScraper
@@ -11,6 +9,7 @@ logger = logging.getLogger(__name__)
 class ScraperRouter:
     """
     Decides which scraper to use based on configuration and response heuristics.
+    Tracks 'html' vs 'js' execution.
     """
 
     def __init__(self):
@@ -34,12 +33,14 @@ class ScraperRouter:
             logger.info(f"Router: Attempting HTML scrape for {url}")
             result = self.html_scraper.fetch(url, **kwargs)
 
+            # Heuristic check: Did we get a valid page or an empty JS shell?
             if self._looks_js_heavy(result.html):
                 logger.info(
                     f"Router: Detected JS-heavy content. Falling back to JS scraper for {url}"
                 )
                 return self.js_scraper.fetch(url, **kwargs)
 
+            # Use the HTML result
             return result
 
         except Exception as e:
@@ -53,6 +54,7 @@ class ScraperRouter:
     def _looks_js_heavy(self, html: str) -> bool:
         """
         Analyze HTML to check if it requires JavaScript to render meaningful content.
+        Returns True if it looks like a JS-heavy/Single Page App shell.
         """
         if not html:
             return True
@@ -63,6 +65,7 @@ class ScraperRouter:
             "javascript is required",
             "please enable javascript",
             "browser doesn't support javascript",
+            "you need to enable javascript to run this app",
         ]
 
         lower_html = html.lower()
@@ -73,9 +76,13 @@ class ScraperRouter:
                 return True
 
         # 2. Check for very small body content with common SPA root elements
-        # (This is a rough heuristic)
+        # (This is a rough heuristic) - If page is too small (< 2KB) and has root hook
         if len(html) < 2000:
-            if 'id="root"' in lower_html or 'id="app"' in lower_html:
+            if (
+                'id="root"' in lower_html
+                or 'id="app"' in lower_html
+                or 'id="__next"' in lower_html
+            ):
                 # If it's small and has a root div, it's likely an empty shell
                 return True
 

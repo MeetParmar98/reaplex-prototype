@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Optional, Dict
+from typing import Optional
 
 from src.scraper.base import BaseScraper, ScrapeResult
 from src.stealth.browser.nodriver_session import create_session
@@ -20,9 +20,11 @@ class JSScraper(BaseScraper):
         Fetch URL using asyncio-managed browser session.
         Wraps async logic in a synchronous call.
         """
-        # Create a new event loop for this operation or use asyncio.run
-        # asyncio.run is the standard way to run top-level async code
         try:
+            # We use a new event loop or the existing one?
+            # Since this is likely called from a sync Worker context, asyncio.run is appropriate.
+            # However, if the broader app is async, this might nest loops.
+            # For this 'Worker' design which is thread-based/sync, asyncio.run is correct.
             return asyncio.run(self._fetch_async(url, **kwargs))
         except Exception as e:
             logger.error(f"JSScraper execution failed: {e}")
@@ -50,6 +52,7 @@ class JSScraper(BaseScraper):
 
             html = await session.get_page_content()
             duration = time.time() - start_time
+            timestamp = time.time()
 
             logger.info(f"JSScraper: Navigation successful ({len(html)} bytes)")
 
@@ -61,6 +64,7 @@ class JSScraper(BaseScraper):
                 status=200,
                 scraper_type="js",
                 response_time=duration,
+                timestamp=timestamp,
             )
 
         except Exception as e:
