@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, Any
+
 from src.worker.executor import Executor
 
 logger = logging.getLogger(__name__)
@@ -7,23 +8,37 @@ logger = logging.getLogger(__name__)
 
 class BrowserExecutor(Executor):
     """
-    Placeholder Executor for processing JavaScript-heavy pages via a browser.
-    Currently only logs the action.
+    Executor for JavaScript-heavy pages.
+
+    Intended future implementation:
+    - Playwright / Selenium
+    - DOM wait
+    - JS execution
+    - HTML or data extraction
+
+    Current version is a placeholder to validate system flow.
     """
 
     def run(self, payload: Dict[str, Any]) -> None:
         """
-        Executes the Browser job (simulated).
+        Execute a browser-based job.
 
-        Args:
-            payload (Dict[str, Any]): Job payload containing 'url'.
+        Expected payload:
+        {
+            "url": "https://example.com",
+            "render_js": true
+        }
         """
         url = payload.get("url")
         if not url:
-            logger.error("Job payload missing 'url'")
-            raise ValueError("Job payload missing 'url' field")
+            raise ValueError("BrowserExecutor requires 'url' in payload")
 
-        logger.info(f"BrowserExecutor: Simulate launching browser for {url}")
+        logger.info(f"BrowserExecutor: Starting browser job → {url}")
 
-        # Placeholder logic
-        logger.info(f"BrowserExecutor: Finished processing {url} (Simulated)")
+        # TODO:
+        # - Launch browser instance
+        # - Navigate to URL
+        # - Wait for page readiness
+        # - Extract rendered HTML or data
+
+        logger.info(f"BrowserExecutor: Finished browser job → {url}")

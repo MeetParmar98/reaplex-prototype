@@ -1,6 +1,7 @@
 import logging
-import httpx
 from typing import Dict, Any
+
+import httpx
 from src.worker.executor import Executor
 
 logger = logging.getLogger(__name__)
@@ -8,51 +9,51 @@ logger = logging.getLogger(__name__)
 
 class HtmlExecutor(Executor):
     """
-    Executor implementation for fetching static HTML content.
-    Uses httpx to perform HTTP GET requests.
+    Executor for static HTML pages.
+
+    Responsibilities:
+    - Fetch HTML via HTTP
+    - Validate response
+    - Hand off content for further processing (later)
+
+    This executor MUST NOT:
+    - Know about Redis
+    - Retry jobs
+    - Handle failures beyond raising exceptions
     """
 
     def run(self, payload: Dict[str, Any]) -> None:
         """
-        Executes the HTML fetch job.
+        Execute a static HTML fetch job.
 
-        Args:
-            payload (Dict[str, Any]): Job payload containing 'url'.
-
-        Raises:
-            ValueError: If 'url' is missing.
-            httpx.HTTPError: If the HTTP request fails.
+        Expected payload:
+        {
+            "url": "https://example.com"
+        }
         """
         url = payload.get("url")
         if not url:
-            logger.error("Job payload missing 'url'")
-            raise ValueError("Job payload missing 'url' field")
+            raise ValueError("HtmlExecutor requires 'url' in payload")
 
-        logger.info(f"HtmlExecutor: Starting fetch for {url}")
+        logger.info(f"HtmlExecutor: Fetching URL → {url}")
 
         try:
-            # Using a context manager for the client is best practice,
-            # though for single requests httpx.get is fine.
-            # We use a client to control timeouts/headers if needed.
-            with httpx.Client(timeout=30.0) as client:
-                response = client.get(url)
-                response.raise_for_status()
+            response = httpx.get(url, timeout=30.0)
+            response.raise_for_status()
 
-                content_len = len(response.content)
-                logger.info(
-                    f"HtmlExecutor: Successfully fetched {url}. Status: {response.status_code}, Length: {content_len} bytes"
-                )
+            html = response.text
+            size = len(html)
 
-                # In a real app, we might save the content here
-
-        except httpx.RequestError as e:
-            logger.error(f"HtmlExecutor: Network error fetching {url}: {e}")
-            raise
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                f"HtmlExecutor: HTTP error fetching {url}: {e.response.status_code}"
+            logger.info(
+                f"HtmlExecutor: Fetched successfully → {url} "
+                f"(status={response.status_code}, bytes={size})"
             )
-            raise
-        except Exception as e:
-            logger.error(f"HtmlExecutor: Unexpected error: {e}")
+
+            # TODO:
+            # - Parse HTML
+            # - Extract links / data
+            # - Persist results
+
+        except httpx.HTTPError as e:
+            logger.error(f"HtmlExecutor: HTTP error while fetching {url}: {e}")
             raise
