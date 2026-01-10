@@ -6,6 +6,7 @@ beautifulsoup4
 nodriver
 typer
 rich
+redis
 
 # Optional / recommended parsers for BeautifulSoup
 # lxml
