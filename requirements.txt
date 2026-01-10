@@ -1,0 +1,11 @@
+# Inferred third-party dependencies for the project
+# Install with: pip install -r requirements.txt
+
+curl-cffi
+beautifulsoup4
+nodriver
+typer
+rich
+
+# Optional / recommended parsers for BeautifulSoup
+# lxml
