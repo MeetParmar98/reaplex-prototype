@@ -20,7 +20,7 @@
 # ---------------------------------------------------------------------------
 
 import asyncio
-from typing import Optional
+
 from urllib.parse import quote_plus
 
 from stealth.browser.nodriver_session import create_session as create_nodriver_session
@@ -54,16 +54,23 @@ class AdvancedSearcher:
         # Engine-specific selectors and endpoints
         self.engines = {
             "google": {
-                "url": "https://www.google.com",
+                "url": "https://www.google.com/search?q=",
                 "search_field": "input[name='q']",
                 "submit_key": "Enter",
             },
             "bing": {
-                "url": "https://www.bing.com",
+                "url": "https://www.bing.com/search?q=",
                 "search_field": "input[id='sb_form_q']",
                 "submit_key": "Enter",
             },
         }
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
 
     # ------------------------------------------------------------------
     # Session Lifecycle
@@ -80,13 +87,6 @@ class AdvancedSearcher:
             await self.session.close()
             self.session = None
             print("✅ Searcher closed")
-
-    def __del__(self):
-        """Best-effort cleanup when garbage collected."""
-        try:
-            asyncio.run(self.close())
-        except Exception:
-            pass
 
     # ------------------------------------------------------------------
     # Search Execution
@@ -110,7 +110,8 @@ class AdvancedSearcher:
 
         try:
             # Build search URL directly (more reliable than simulating typing)
-            search_url = f"https://www.google.com/search?q={quote_plus(query)}"
+            base_url = self.engines.get(self.engine, self.engines["google"])["url"]
+            search_url = f"{base_url}{quote_plus(query)}"
             print(f"📍 Navigating to: {search_url}")
 
             # Step 1: Navigate to search results
@@ -131,6 +132,10 @@ class AdvancedSearcher:
             print("📄 Extracting page content...")
             content = await self.session.get_page_content()
 
+            if "captcha" in content.lower():
+                print("🚨 WARNING: Blocked by search engine (CAPTCHA)")
+                return ""
+
             self._inspect_content(content)
             return content
 
@@ -149,17 +154,29 @@ class AdvancedSearcher:
         Returns:
             True if results container was found, False otherwise.
         """
+        # Try Google selectors first
         try:
-            await self.session.wait_for_selector("#search", timeout=10)
+            await self.session.wait_for_selector("#search", timeout=5)
             print("✅ Search results container detected (#search)")
             return True
         except Exception:
             try:
-                await self.session.wait_for_selector("div.g", timeout=10)
+                await self.session.wait_for_selector("div.g", timeout=5)
                 print("✅ Search result blocks detected (div.g)")
                 return True
             except Exception:
-                return False
+                pass
+        
+        # Try Bing selectors
+        if self.engine == "bing":
+            try:
+                await self.session.wait_for_selector("#b_results", timeout=5)
+                print("✅ Bing results detected (#b_results)")
+                return True
+            except Exception:
+                pass
+        
+        return False
 
     def _inspect_content(self, content: str) -> None:
         """
@@ -210,6 +227,7 @@ class AdvancedSearcher:
 # Convenience Function
 # ---------------------------------------------------------------------------
 
+
 async def search(query: str, engine: str = "google", headless: bool = True) -> str:
     """
     Perform a one-off search without managing the session manually.
@@ -222,10 +240,5 @@ async def search(query: str, engine: str = "google", headless: bool = True) -> s
     Returns:
         Raw HTML content of the results page.
     """
-    searcher = AdvancedSearcher(headless=headless, engine=engine)
-    await searcher.start()
-
-    try:
+    async with AdvancedSearcher(headless=headless, engine=engine) as searcher:
         return await searcher.search(query)
-    finally:
-        await searcher.close()

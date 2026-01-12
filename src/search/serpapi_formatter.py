@@ -287,9 +287,8 @@ class SerpAPIFormatter:
         """Extract local map results."""
         places = []
 
-        local_section = (
-            soup.find("div", {"data-local-results": True})
-            or soup.find("div", {"jsname": "xQi4de"})
+        local_section = soup.find("div", {"data-local-results": True}) or soup.find(
+            "div", {"jsname": "xQi4de"}
         )
 
         if not local_section:
@@ -426,18 +425,57 @@ class SerpAPIFormatter:
         links = []
         seen = set()
 
-        containers = soup.find_all("div", {"class": "g"}) or [soup]
+        # Try Google containers first (div.g is the standard Google result container)
+        containers = soup.find_all("div", {"class": "g"})
+        
+        # If no Google containers, search the whole page
+        if not containers:
+            containers = [soup]
 
         for container in containers:
-            for a in container.find_all("a", href=True):
-                href = a["href"]
+            # Find all anchor tags with href attributes
+            anchors = container.find_all("a", href=True)
 
+            for a in anchors:
+                href = a.get("href", "")
+                if not href:
+                    continue
+
+                # Handle Google redirects (/url?q=...)
                 if href.startswith("/url?q="):
                     href = href.split("/url?q=")[1].split("&")[0]
+                elif href.startswith("/url?"):
+                    try:
+                        qs = parse_qs(urlparse(href).query)
+                        if "q" in qs:
+                            href = qs["q"][0]
+                    except Exception:
+                        pass
 
+                # Decode URL encoding
+                href = unquote(href)
+
+                # Skip non-HTTP(S) links
                 if not href.startswith(("http://", "https://")):
                     continue
 
+                # Filter out search engine internal links
+                if any(
+                    bad in href.lower()
+                    for bad in [
+                        "google.com/search",
+                        "google.com/url",
+                        "accounts.google.com",
+                        "support.google.com",
+                        "bing.com/search",
+                        "bing.com/ck",
+                        "yandex.com/search",
+                        "yahoo.com/search",
+                    ]
+                ):
+                    continue
+
+                # Deduplicate
                 if href in seen:
                     continue
 

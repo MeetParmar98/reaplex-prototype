@@ -207,13 +207,6 @@ class NoderiverSession:
                 print("✅ Nodriver browser closed")
         except:
             pass
-    
-    def __del__(self):
-        """Cleanup on deletion."""
-        try:
-            asyncio.run(self.close())
-        except:
-            pass
 
 
 async def create_session(headless: bool = True) -> NoderiverSession:

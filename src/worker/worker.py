@@ -5,12 +5,12 @@ from typing import Callable, Dict, Any, Optional
 
 # Adjust import based on your project structure
 try:
-    from src.queue.queue import Queue
+    from src.reaplex_queue.queue import Queue
 except ImportError:
     import sys, os
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-    from src.queue.queue import Queue
+    from src.reaplex_queue.queue import Queue
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@
 from typing import Dict, Optional
 
 from curl_cffi import requests as cffi_requests
-from steath import fingerprint
+from stealth import fingerprint
 
 
 class JA4Client:
@@ -39,8 +39,7 @@ class JA4Client:
         return {
             "User-Agent": fingerprint.get_random_user_agent(),
             "Accept": (
-                "text/html,application/xhtml+xml,"
-                "application/xml;q=0.9,*/*;q=0.8"
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
             ),
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
